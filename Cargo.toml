@@ -1,0 +1,9 @@
+[workspace]
+
+members = [ "blue_sky_dao","blue_sky_entity", "blue_sky_service", "blue_sky_web"]
+[package]
+name = "blue_sky"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]

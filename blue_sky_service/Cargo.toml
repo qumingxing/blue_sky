@@ -1,0 +1,7 @@
+[package]
+name = "blue_sky_service"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+blue_sky_dao = { path = "../blue_sky_dao" }
