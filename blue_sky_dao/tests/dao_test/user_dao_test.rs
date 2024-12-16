@@ -9,7 +9,7 @@ use blue_sky_dao::error::database_error::DatabaseErrorType;
 use blue_sky_entity::dto::user::{Hobby, User};
 
 lazy_static! {
-    static ref  MYSQL_URL: String = String::from("mysql://u_operator:BIyL3lhafOZZ@10.194.0.254:4000/ads_qa");
+    static ref  MYSQL_URL: String = String::from("mysql://xxx");
 }
 
 
