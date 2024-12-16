@@ -1,6 +1,6 @@
 ## Learning Rust as a Beginner with Java Experience
 
-As a new Rust learner with a background in Java, I am still trying to grasp Rust based on our previous experiences. However, I have found the results to be unsatisfactory. Therefore, I decided to create a new project that simulates a real business scenario as my target.
+As a new Rust learner with a background in Java, I am still trying to grasp Rust based on our previous experiences. However, I have found the results to be unsatisfactory. Therefore, I decided to create a new project that simulates a real business scenario as my target and as few third-party libraries as possible.
 
 After several days of learning, I have summarized some conclusions as follows:
 
