@@ -8,7 +8,7 @@ pub mod dao;
 pub mod error;
 
 lazy_static! {
-    static ref  MYSQL_URL: String = String::from("mysql://u_operator:BIyL3lhafOZZ@10.194.0.254:4000/ads_qa");
+    static ref  MYSQL_URL: String = String::from("mysql://xx");
     static ref MYSQL: MySQL = MySQL::initialize(MYSQL_URL.as_str());
 
     static ref USER_DAO: Arc<Mutex<UserDao<'static>>> = {
