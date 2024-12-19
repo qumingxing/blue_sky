@@ -1,9 +1,16 @@
+use lazy_static::lazy_static;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
+use std::sync::Mutex;
 use std::{env, fs};
+use threadpool::ThreadPool;
+
+lazy_static! {
+    static ref POOL: Mutex<ThreadPool> = Mutex::new(ThreadPool::new(4));
+}
 
 pub fn start_server() {
     let listener = TcpListener::bind("0.0.0.0:8080").unwrap();
@@ -19,8 +26,8 @@ fn handle_connection(mut stream: TcpStream) {
 
     stream.read(&mut buffer).unwrap();
     println!("Request: {}", String::from_utf8_lossy(&buffer[..]));
-    let http_protocol = &parse_protocol(&buffer);
-    println!("{:?}", http_protocol.request_value.get_int("b"));
+    let http_request = parse_protocol(&buffer);
+    handle_request(http_request);
     let dir = env::current_dir().unwrap();
     let html = format!("{}{}", dir.to_str().unwrap(), "/blue_sky_web/hello.html");
     let contents = fs::read_to_string(html).unwrap();
@@ -34,6 +41,13 @@ fn handle_connection(mut stream: TcpStream) {
     stream.write(response.as_bytes()).unwrap();
     stream.flush().unwrap();
 }
+
+fn handle_request(http_request: HttpRequest) {
+    POOL.lock()
+        .unwrap()
+        .execute(move || println!("xxxx {:?}", http_request.context_path));
+}
+
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 enum Method {
     GET,
@@ -46,7 +60,7 @@ impl Default for Method {
     }
 }
 #[derive(Debug, PartialEq, Eq)]
-struct HttpProtocol {
+struct HttpRequest {
     context_path: String,
     method: Method,
     headers: HashMap<String, String>,
@@ -92,7 +106,7 @@ impl RequestValue {
         }
     }
 }
-fn parse_protocol(buffer: &[u8; 1024]) -> HttpProtocol {
+fn parse_protocol(buffer: &[u8; 1024]) -> HttpRequest {
     let original_content = String::from_utf8_lossy(&buffer[..]);
     let raw_lines = original_content.split("\n").collect::<Vec<&str>>();
     let request_method_params = raw_lines[0].split(" ").collect::<Vec<&str>>();
@@ -131,7 +145,7 @@ fn parse_protocol(buffer: &[u8; 1024]) -> HttpProtocol {
         }
     }
 
-    HttpProtocol {
+    HttpRequest {
         method,
         context_path,
         headers,
