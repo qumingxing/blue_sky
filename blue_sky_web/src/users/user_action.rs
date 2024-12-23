@@ -4,10 +4,10 @@ use blue_sky_macro::route;
 
 pub struct MyHandler;
 
-#[route("GET", "/abc")]
-fn handle_abc(request: &HttpRequest) -> Response {
+#[route("GET", "/demo")]
+fn handle_demo(request: &HttpRequest) -> Response {
     Response {
         status_code: 200,
-        body: "Hello from /abc".to_string(),
+        body: "Hello from /demo".to_string(),
     }
 }
