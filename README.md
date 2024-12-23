@@ -11,3 +11,19 @@ After several days of learning, I have summarized some conclusions as follows:
 5. **Be patient:**,Mastery takes time, and it’s important to celebrate small victories along the way.
 
 By focusing on these principles, I hope to improve my Rust skills and gain more confidence in using this powerful language.
+
+## Demo Practice
+```
+use crate::router::{Response};
+use crate::server::HttpRequest;
+use blue_sky_macro::route;
+
+pub struct MyHandler;
+
+#[route("GET", "/demo")]
+fn handle_demo(request: &HttpRequest) -> Response {
+    Response {
+        status_code: 200,
+        body: "Hello from /demo".to_string(),
+    }
+}
