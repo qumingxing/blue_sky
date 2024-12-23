@@ -1,15 +1,20 @@
+use crate::router::{Response, Router};
+use crate::users::user_action::MyHandler;
 use lazy_static::lazy_static;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::fmt::{Display, Formatter};
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
-use std::sync::Mutex;
+use std::sync::mpsc::Sender;
+use std::sync::{mpsc, Arc, Mutex};
 use std::{env, fs};
 use threadpool::ThreadPool;
 
 lazy_static! {
     static ref POOL: Mutex<ThreadPool> = Mutex::new(ThreadPool::new(4));
+    static ref INSTANCE: Mutex<Router> = Mutex::new(Router::new());
 }
 
 pub fn start_server() {
@@ -27,25 +32,63 @@ fn handle_connection(mut stream: TcpStream) {
     stream.read(&mut buffer).unwrap();
     println!("Request: {}", String::from_utf8_lossy(&buffer[..]));
     let http_request = parse_protocol(&buffer);
-    handle_request(http_request);
-    let dir = env::current_dir().unwrap();
-    let html = format!("{}{}", dir.to_str().unwrap(), "/blue_sky_web/hello.html");
-    let contents = fs::read_to_string(html).unwrap();
+    let (tx, rx) = mpsc::channel();
+    handle_request(tx, Arc::new(Mutex::new(http_request)));
+    let response = rx.recv().unwrap();
+    if let Some(res) = response {
+        let res_json = serde_json::to_string(&res);
+        match res_json {
+            Ok(res_json) => {
+                let response = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{}",
+                    res_json.len(),
+                    res_json
+                );
 
-    let response = format!(
-        "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{}",
-        contents.len(),
-        contents
-    );
+                stream.write(response.as_bytes()).unwrap();
+                stream.flush().unwrap();
+            }
+            Err(e) => {
+                eprintln!("Response error: {:?}", e);
+            }
+        }
+    } else {
+        let contents = String::from(
+            r#"<html>
+                <head><title>404 Not Found</title></head>
+                <body><h1>404 Not Found</h1></body>
+                </html>"#,
+        );
+        let response = format!(
+            "HTTP/1.1 404 Not Found\r\nContent-Length: {}\r\nContent-Type: text/html\r\n\r\n{}",
+            contents.len(),
+            contents
+        );
 
-    stream.write(response.as_bytes()).unwrap();
-    stream.flush().unwrap();
+        stream.write(response.as_bytes()).unwrap();
+        stream.flush().unwrap();
+    }
 }
-
-fn handle_request(http_request: HttpRequest) {
-    POOL.lock()
-        .unwrap()
-        .execute(move || println!("xxxx {:?}", http_request.context_path));
+fn handle_request(
+    sender: Sender<Option<Response>>,
+    http_request: Arc<Mutex<HttpRequest>>,
+) -> Option<Response> {
+    let mut response: Option<Response> = None;
+    POOL.lock().unwrap().execute(move || {
+        let router = &mut INSTANCE.lock().unwrap();
+        MyHandler::register_route(router);
+        let request = &http_request.lock().unwrap();
+        let route_fn = router.get_route(
+            request.method.to_string().as_str(),
+            request.context_path.as_str(),
+        );
+        if let Some(route) = route_fn {
+            sender.send(Some(route(request))).unwrap();
+        } else {
+            sender.send(None).unwrap();
+        }
+    });
+    response
 }
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -54,13 +97,22 @@ enum Method {
     POST,
     DELETE,
 }
+impl Display for Method {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Method::GET => write!(f, "GET"),
+            Method::POST => write!(f, "POST"),
+            Method::DELETE => write!(f, "DELETE"),
+        }
+    }
+}
 impl Default for Method {
     fn default() -> Self {
         Method::GET
     }
 }
 #[derive(Debug, PartialEq, Eq)]
-struct HttpRequest {
+pub struct HttpRequest {
     context_path: String,
     method: Method,
     headers: HashMap<String, String>,

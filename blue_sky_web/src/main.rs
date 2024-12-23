@@ -1,6 +1,8 @@
 use flexi_logger::{AdaptiveFormat, Duplicate, Logger};
 
 mod server;
+mod router;
+mod users;
 
 fn main() {
     Logger::with_env_or_str("info")
@@ -12,4 +14,7 @@ fn main() {
         .unwrap();
 
     server::start_server();
+
+
+
 }
