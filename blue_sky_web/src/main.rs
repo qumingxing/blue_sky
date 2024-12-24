@@ -1,8 +1,10 @@
 use flexi_logger::{AdaptiveFormat, Duplicate, Logger};
 
-mod server;
 mod router;
+mod server;
 mod users;
+mod request_mapping;
+mod web_handler;
 
 fn main() {
     Logger::with_env_or_str("info")
@@ -13,8 +15,6 @@ fn main() {
         .start()
         .unwrap();
 
+    log::info!("Server start up!");
     server::start_server();
-
-
-
 }

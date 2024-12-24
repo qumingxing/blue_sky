@@ -60,7 +60,7 @@ impl BaseDao<User> for UserDao<'_> {
 
         match user {
             Some(r) => Ok(r),
-            None => Err(Box::new(Error::new(ErrorKind::NotFound, "user not found"))),
+            None => Err(Box::new(Error::new(ErrorKind::NotFound, "users not found"))),
         }
     }
 
@@ -92,7 +92,7 @@ impl BaseDao<User> for UserDao<'_> {
 
     fn delete(&self, dto: &User) -> Result<usize, Box<dyn std::error::Error>> {
         if dto.user_id.is_empty() {
-            return Err(Box::new(Error::new(ErrorKind::NotFound, "user not found")));
+            return Err(Box::new(Error::new(ErrorKind::NotFound, "users not found")));
         }
 
         self.mysql.get_conn().exec_drop("DELETE FROM t_user where user_id=:user_id", params! {"user_id"=>&dto.user_id})

@@ -1,5 +1,5 @@
+use crate::request_mapping::register_request_mapping;
 use crate::router::{Response, Router};
-use crate::users::user_action::MyHandler;
 use lazy_static::lazy_static;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -14,10 +14,13 @@ use threadpool::ThreadPool;
 
 lazy_static! {
     static ref POOL: Mutex<ThreadPool> = Mutex::new(ThreadPool::new(4));
-    static ref INSTANCE: Mutex<Router> = Mutex::new(Router::new());
+    pub static ref INSTANCE: Mutex<Router> = Mutex::new(Router::new());
 }
 
 pub fn start_server() {
+    log::info!("Starting register request mapping!");
+    register_request_mapping();
+    log::info!("Register success!");
     let listener = TcpListener::bind("0.0.0.0:8080").unwrap();
     println!("Server running on 0.0.0.0:8080");
     for stream in listener.incoming() {
@@ -76,7 +79,7 @@ fn handle_request(
     let mut response: Option<Response> = None;
     POOL.lock().unwrap().execute(move || {
         let router = &mut INSTANCE.lock().unwrap();
-        MyHandler::register_route(router);
+
         let request = &http_request.lock().unwrap();
         let route_fn = router.get_route(
             request.method.to_string().as_str(),

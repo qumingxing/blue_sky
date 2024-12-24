@@ -18,12 +18,26 @@ use crate::router::{Response};
 use crate::server::HttpRequest;
 use blue_sky_macro::route;
 
-pub struct MyHandler;
-
 #[route("GET", "/demo")]
 fn handle_demo(request: &HttpRequest) -> Response {
     Response {
         status_code: 200,
         body: "Hello from /demo".to_string(),
     }
+}
+
+#[route("GET", "/demo_other")]
+fn handle_demo_other(request: &HttpRequest) -> Response {
+    Response {
+        status_code: 200,
+        body: "Hello from /demo_other".to_string(),
+    }
+}
+```
+#### Modify request_mapping.rs
+```
+pub fn register_request_mapping(){
+    let router = &mut crate::server::INSTANCE.lock().unwrap();
+    WebHandler::register_route_handle_demo(router);
+    WebHandler::register_route_handle_demo_x(router);
 }
