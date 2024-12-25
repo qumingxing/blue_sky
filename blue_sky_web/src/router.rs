@@ -1,14 +1,15 @@
 use crate::server::HttpRequest;
-use serde::Serialize;
+use serde::{Serialize, Serializer};
 use std::collections::HashMap;
+use serde_json::{Value};
 
 pub trait RouteHandler {
     fn handle(&self, request: &HttpRequest) -> Response;
 }
-#[derive(Serialize)]
+#[derive(Default,Serialize)]
 pub struct Response {
     pub status_code: u16,
-    pub body: String,
+    pub data: Option<Value>,
 }
 
 pub struct Router {
