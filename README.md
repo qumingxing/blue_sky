@@ -20,7 +20,7 @@ language.
 
 ## Demo Practice
 
-#### Add request handlers
+#### Step 1: Add request handlers
 
 ```
 use crate::response::demo_response::DemoResponseBuilder;
@@ -49,7 +49,7 @@ fn handle_demo_other(request: &HttpRequest) -> Response {
 }
 ```
 
-#### Modify request_mapping.rs
+#### Step 2: Modify request_mapping.rs
 
 ```
 pub fn register_request_mapping(){
