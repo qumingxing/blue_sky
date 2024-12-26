@@ -40,11 +40,11 @@ fn handle_demo(request: &HttpRequest) -> Response {
     }
 }
 
-#[route("GET", "/demo_other")]
+#[route("POST", "/demo_other")]
 fn handle_demo_other(request: &HttpRequest) -> Response {
     Response {
         status_code: 200,
-        body: "Hello from /demo_other".to_string(),
+        ..Default::default()
     }
 }
 ```
