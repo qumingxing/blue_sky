@@ -3,6 +3,7 @@ use crate::router::{Response, Router};
 use lazy_static::lazy_static;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::io::{Read, Write};
@@ -33,7 +34,6 @@ fn handle_connection(mut stream: TcpStream) {
     let mut buffer = [0; 1024];
 
     stream.read(&mut buffer).unwrap();
-    println!("Request: {}", String::from_utf8_lossy(&buffer[..]));
     let http_request = parse_protocol(&buffer);
     let (tx, rx) = mpsc::channel();
     handle_request(tx, Arc::new(Mutex::new(http_request)));
@@ -119,7 +119,8 @@ pub struct HttpRequest {
     context_path: String,
     method: Method,
     headers: HashMap<String, String>,
-    request_value: RequestValue,
+    request_value: Option<RequestValue>,
+    body: Option<Value>,
 }
 #[derive(Debug, PartialEq, Eq)]
 struct RequestValue {
@@ -163,7 +164,7 @@ impl RequestValue {
 }
 fn parse_protocol(buffer: &[u8; 1024]) -> HttpRequest {
     let original_content = String::from_utf8_lossy(&buffer[..]);
-    let raw_lines = original_content.split("\n").collect::<Vec<&str>>();
+    let raw_lines = original_content.split("\r\n").collect::<Vec<&str>>();
     let request_method_params = raw_lines[0].split(" ").collect::<Vec<&str>>();
     let method = match request_method_params[0] {
         "GET" => Method::GET,
@@ -173,30 +174,53 @@ fn parse_protocol(buffer: &[u8; 1024]) -> HttpRequest {
     };
 
     let context_path_params = request_method_params[1];
+    let mut request_params: HashMap<String, String> = HashMap::new();
     let context_path = if let Some(end_pos) = context_path_params.find("?") {
+        let cut_params = request_method_params[1][end_pos + 1..].to_string();
+        let params = cut_params.split("&").collect::<Vec<&str>>();
+        request_params = parse_params(&params);
         request_method_params[1][0..end_pos].to_string()
+    } else if let None = context_path_params.find("?") {
+        context_path_params.to_string()
     } else {
         "/".to_string()
     };
-    let regex = Regex::new(r"[?/]").unwrap();
-    let params = regex.replace_all(context_path_params, "");
-    let mut params = params.split("&").collect::<Vec<&str>>();
-
-    let mut request_params = HashMap::new();
-    for param in params {
-        let p = param.split("=").collect::<Vec<&str>>();
-        request_params.insert(p[0].to_string(), p[1].to_string());
-    }
 
     let request_value = RequestValue::new(request_params);
 
     let mut headers = HashMap::new();
+    let mut body: Option<Value> = None;
+    let re = Regex::new(r#"\{.*?\}|\[.*?\]"#).unwrap();
     for (index, value) in raw_lines.iter().enumerate().skip(1) {
         let request_entry = value.split(": ").collect::<Vec<&str>>();
         if request_entry.len() == 2 {
             let key = request_entry[0].trim().to_string();
             let value = request_entry[1].trim().to_string();
             headers.insert(key, value);
+        } else {
+            if headers.contains_key("Content-Type")
+                && headers
+                    .get("Content-Type")
+                    .unwrap()
+                    .contains("application/json")
+            {
+                if let Some(captures) = re.captures(value) {
+                    if let Some(json) = captures.get(0) {
+                        body = Some(json.as_str().into());
+                    }
+                }
+            }
+            if headers.contains_key("Content-Type")
+                && headers
+                    .get("Content-Type")
+                    .unwrap()
+                    .contains("application/x-www-form-urlencoded")
+            {
+                if value.contains("&") || value.contains("=") {
+                    let params = value.split("&").collect::<Vec<&str>>();
+                    request_params = parse_params(&params);
+                }
+            }
         }
     }
 
@@ -204,6 +228,18 @@ fn parse_protocol(buffer: &[u8; 1024]) -> HttpRequest {
         method,
         context_path,
         headers,
-        request_value,
+        request_value: Some(request_value),
+        body,
     }
+}
+
+fn parse_params(params: &Vec<&str>) -> HashMap<String, String> {
+    let mut request_params = HashMap::new();
+    for param in params {
+        let p = param.split("=").collect::<Vec<&str>>();
+        if p.len() % 2 == 0 {
+            request_params.insert(p[0].to_string(), p[1].to_string());
+        }
+    }
+    request_params
 }
