@@ -24,8 +24,6 @@ pub struct Config {
 #[derive(Debug, Deserialize)]
 pub struct Database {
     pub db_url: String,
-    pub ports: u16,
-    pub password: String,
     pub connection_max: u32,
 }
 
