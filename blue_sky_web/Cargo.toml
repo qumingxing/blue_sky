@@ -5,6 +5,8 @@ edition = "2021"
 
 [dependencies]
 blue_sky_macro = { path = "../blue_sky_macro" }
+blue_sky_service = { path = "../blue_sky_service" }
+blue_sky_entity = { path = "../blue_sky_entity" }
 serde = { version = "1.0.216", features = ["derive"] }
 log = "0.4"
 env_logger = "0.10"
