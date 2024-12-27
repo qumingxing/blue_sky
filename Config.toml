@@ -1,0 +1,12 @@
+title = "blue_sky configuration"
+
+[redis]
+conn_addr = "127.0.0.1:6379"
+database = 10
+
+[mysql]
+db_url = "mysql://user_name:password@ip:port/db"
+user = "root"
+password = "xxx"
+ports = 3306
+connection_max = 5000

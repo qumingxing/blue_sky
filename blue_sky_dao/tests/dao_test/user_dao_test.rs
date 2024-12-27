@@ -1,22 +1,21 @@
-use chrono::Utc;
-use lazy_static::lazy_static;
-use log::info;
-use uuid::Uuid;
+use blue_sky_dao::config::get_db_config;
 use blue_sky_dao::dao::jdbc_template::BaseDao;
 use blue_sky_dao::dao::mysql_datasource::MySQL;
 use blue_sky_dao::dao::user_dao::UserDao;
 use blue_sky_dao::error::database_error::DatabaseErrorType;
 use blue_sky_entity::dto::user::{Hobby, User};
-
-lazy_static! {
-    static ref  MYSQL_URL: String = String::from("mysql://xxx");
-}
-
+use chrono::Utc;
+use lazy_static::lazy_static;
+use log::info;
+use uuid::Uuid;
 
 #[test]
 fn get_user_by_id() {
-    let search_user = &User { user_id: String::from("911be6e3-40c7-4373-a771-071cddb9960e"), ..Default::default() };
-    let mysql = &MySQL::initialize(MYSQL_URL.as_str());
+    let search_user = &User {
+        user_id: String::from("911be6e3-40c7-4373-a771-071cddb9960e"),
+        ..Default::default()
+    };
+    let mysql = &MySQL::initialize(get_db_config().db_url.as_str());
     let user_dao = UserDao { mysql };
     let rs = user_dao.get(search_user);
     if let Ok(user) = rs {
@@ -26,7 +25,7 @@ fn get_user_by_id() {
 
 #[test]
 fn select_user_list_without_params() {
-    let mysql = &MySQL::initialize(MYSQL_URL.as_str());
+    let mysql = &MySQL::initialize(get_db_config().db_url.as_str());
     let user_dao = UserDao { mysql };
     let rs = user_dao.select_list(None);
     if let Ok(users) = rs {
@@ -41,7 +40,7 @@ fn select_user_list_with_params() {
         user_name,
         ..Default::default()
     };
-    let mysql = &MySQL::initialize(MYSQL_URL.as_str());
+    let mysql = &MySQL::initialize(get_db_config().db_url.as_str());
     let user_dao = UserDao { mysql };
     let rs = user_dao.select_list(Some(user));
     if let Ok(users) = rs {
@@ -61,7 +60,7 @@ fn save_user() {
         updated_at: ts,
         ..Default::default()
     };
-    let mysql = &MySQL::initialize(MYSQL_URL.as_str());
+    let mysql = &MySQL::initialize(get_db_config().db_url.as_str());
     let user_dao = UserDao { mysql };
     let rs = user_dao.save(user);
     if let Ok(count) = rs {
@@ -78,7 +77,7 @@ fn update_user() {
         updated_at: ts,
         ..Default::default()
     };
-    let mysql = &MySQL::initialize(MYSQL_URL.as_str());
+    let mysql = &MySQL::initialize(get_db_config().db_url.as_str());
     let user_dao = UserDao { mysql };
     let rs = user_dao.update(user);
     if let Ok(count) = rs {
@@ -92,13 +91,13 @@ fn delete_user() {
         user_id: String::from("911be6e3-40c7-4373-a771-071cddb9960e"),
         ..Default::default()
     };
-    let mysql = &MySQL::initialize(MYSQL_URL.as_str());
+    let mysql = &MySQL::initialize(get_db_config().db_url.as_str());
     let user_dao = UserDao { mysql };
     let rs = user_dao.delete(user);
     match rs {
         Ok(count) => {
             assert_eq!(count, 1, "user deleted 1 time");
-        },
+        }
         Err(e) => {
             println!("{:?}", e);
         }
