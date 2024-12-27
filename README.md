@@ -20,11 +20,10 @@ language.
 
 ## Demo Practice
 
-#### Step 1: Modify configuration
-
-Config.toml
+#### Step 1: Modify configuration(Config.toml)
 
 ```
+
 title = "blue_sky configuration"
 
 [redis]
@@ -39,7 +38,6 @@ connection_max = 5000
 #### Step 2: Add request handlers
 
 ```
-
 use crate::response::demo_response::DemoResponseBuilder;
 use crate::router::Response;
 use crate::server::HttpRequest;
@@ -47,24 +45,23 @@ use blue_sky_macro::route;
 
 #[route("GET", "/demo")]
 fn handle_demo(request: &HttpRequest) -> Response {
-let response = DemoResponseBuilder::default()
-.message(String::from("Hello"))
-.build()
-.unwrap();
-Response {
-status_code: 200,
-data: Some(serde_json::to_value(response).unwrap()),
-}
+    let response = DemoResponseBuilder::default()
+        .message(String::from("Hello"))
+        .build()
+        .unwrap();
+    Response {
+        status_code: 200,
+        data: Some(serde_json::to_value(response).unwrap()),
+    }
 }
 
 #[route("POST", "/demo_other")]
 fn handle_demo_other(request: &HttpRequest) -> Response {
-Response {
-status_code: 200,
-..Default::default()
+    Response {
+        status_code: 200,
+        ..Default::default()
+    }
 }
-}
-
 ```
 
 #### Step 3: Modify request_mapping.rs
@@ -72,8 +69,9 @@ status_code: 200,
 ```
 
 pub fn register_request_mapping(){
-let router = &mut crate::server::INSTANCE.lock().unwrap();
-WebHandler::register_route_handle_demo(router);
-WebHandler::register_route_handle_demo_other(router);
-...add yours
+    let router = &mut crate::server::INSTANCE.lock().unwrap();
+    WebHandler::register_route_handle_demo(router);
+    WebHandler::register_route_handle_demo_other(router);
+    ...add yours
 }
+```
