@@ -6,3 +6,8 @@ use serde_json::Value;
 pub struct DemoResponse {
     message: String
 }
+
+#[derive(Builder, Serialize)]
+pub struct LoginResponse {
+    message: String
+}

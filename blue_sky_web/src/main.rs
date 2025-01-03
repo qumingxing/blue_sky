@@ -6,6 +6,7 @@ mod users;
 mod request_mapping;
 mod web_handler;
 mod response;
+mod auth;
 
 fn main() {
     Logger::with_env_or_str("info")

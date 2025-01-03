@@ -5,12 +5,15 @@ use std::{env, fs};
 
 lazy_static! {
     static ref CONFIG: Arc<Config> = {
-        let contents = fs::read_to_string(format!(
+        let path = format!(
             "{}/{}",
-            env::current_dir().unwrap().parent().unwrap().to_string_lossy(),
+            env::current_dir()
+                .unwrap()
+                .to_string_lossy(),
             "Config.toml"
-        ))
-        .expect("Unable to read file");
+        );
+        log::info!("loading config:{}", path);
+        let contents = fs::read_to_string(path).expect("Unable to read file");
         let conf: Config = toml::de::from_str(&contents).expect("Unable to parse TOML");
         Arc::new(conf)
     };
