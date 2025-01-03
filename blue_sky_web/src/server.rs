@@ -118,44 +118,44 @@ impl Default for Method {
 pub struct HttpRequest {
     context_path: String,
     method: Method,
-    headers: HashMap<String, String>,
-    request_value: Option<RequestValue>,
-    body: Option<Value>,
+    pub headers: HashMap<String, String>,
+    pub request_value: Option<RequestValue>,
+    pub body: Option<Value>,
 }
 #[derive(Debug, PartialEq, Eq)]
-struct RequestValue {
+pub struct RequestValue {
     request_params: HashMap<String, String>,
 }
 impl RequestValue {
     fn new(request_params: HashMap<String, String>) -> RequestValue {
         RequestValue { request_params }
     }
-    fn get_int(&self, key: &str) -> Option<i32> {
+    pub fn get_int(&self, key: &str) -> Option<i32> {
         match self.request_params.get(key) {
             Some(value) => Some(value.parse::<i32>().unwrap()),
             None => None,
         }
     }
 
-    fn get_string(&self, key: &str) -> Option<String> {
+    pub fn get_string(&self, key: &str) -> Option<String> {
         match self.request_params.get(key) {
             Some(value) => Some(value.to_string()),
             None => None,
         }
     }
-    fn get_float(&self, key: &str) -> Option<f32> {
+    pub fn get_float(&self, key: &str) -> Option<f32> {
         match self.request_params.get(key) {
             Some(value) => Some(value.parse::<f32>().unwrap()),
             None => None,
         }
     }
-    fn get_double(self, key: &str) -> Option<f64> {
+    pub fn get_double(self, key: &str) -> Option<f64> {
         match self.request_params.get(key) {
             Some(value) => Some(value.parse::<f64>().unwrap()),
             None => None,
         }
     }
-    fn get_bool(&self, key: &str) -> Option<bool> {
+    pub fn get_bool(&self, key: &str) -> Option<bool> {
         match self.request_params.get(key) {
             Some(value) => Some(value.parse::<bool>().unwrap()),
             None => None,
