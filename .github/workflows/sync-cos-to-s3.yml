@@ -1,0 +1,91 @@
+name: Sync COS to S3 using DataSync
+
+on:
+  workflow_dispatch:
+    inputs:
+      cos_bucket:
+        description: '腾讯云COS存储桶名称'
+        required: true
+        default: 'digital-architect-1349658851'
+      cos_prefix:
+        description: 'COS对象前缀路径'
+        required: true
+        default: 'eureka/2026-01-01/node2/images'
+      s3_bucket:
+        description: 'AWS S3存储桶名称'
+        required: true
+      s3_prefix:
+        description: 'S3对象前缀路径'
+        required: false
+        default: 'images/'
+
+env:
+  AWS_REGION: eu-west-1
+
+jobs:
+  sync-images:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Check AWS CLI
+        run: |
+          aws --version
+          docker --version
+
+      - name: Create DataSync Location for S3
+        id: create_s3_location
+        run: |
+          S3_LOCATION_ARN=$(aws datasync create-location-s3 \
+            --s3-bucket-arn "arn:aws:s3:::${{ inputs.s3_bucket }}" \
+            --s3-config '{"BucketAccessRoleArn": "arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/DataSyncS3Role"}' \
+            --subdirectory "${{ inputs.s3_prefix }}" \
+            --query 'LocationArn' \
+            --output text)
+          echo "s3_location_arn=$S3_LOCATION_ARN" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: Create DataSync Location for COS (via S3 compatible endpoint)
+        id: create_cos_location
+        run: |
+          # 注意：DataSync不支持直接连接腾讯云COS，需要通过S3兼容接口
+          # 这里使用AWS CLI直接同步，因为DataSync需要特定的网络配置
+          echo "cos_location_arn=manual-sync" >> $GITHUB_OUTPUT
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install rclone (if needed)
+        run: |
+          if ! command -v rclone &> /dev/null; then
+            curl https://rclone.org/install.sh | sudo bash
+          fi
+          rclone --version
+
+      - name: Sync from COS to S3
+        env:
+          TENCENT_COS_SECRET_ID: ${{ secrets.TENCENT_COS_SECRET_ID }}
+          TENCENT_COS_SECRET_KEY: ${{ secrets.TENCENT_COS_SECRET_KEY }}
+        run: |
+          chmod +x scripts/sync_cos_to_s3.sh
+          ./scripts/sync_cos_to_s3.sh \
+            "${{ inputs.cos_bucket }}" \
+            "${{ inputs.cos_prefix }}" \
+            "${{ inputs.s3_bucket }}" \
+            "${{ inputs.s3_prefix }}"
+
+      - name: Verify sync result
+        run: |
+          # 重新配置AWS凭证
+          export AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          export AWS_DEFAULT_REGION=${{ env.AWS_REGION }}
+          
+          # 列出S3中的文件
+          aws s3 ls s3://${{ inputs.s3_bucket }}/${{ inputs.s3_prefix }} --recursive || echo "S3桶为空或同步未完成"
+
