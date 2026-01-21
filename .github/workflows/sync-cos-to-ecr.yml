@@ -1,0 +1,96 @@
+name: Sync COS to ECR Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      cos_bucket:
+        description: 'Tencent COS bucket name'
+        required: true
+        default: 'digital-architect-1349658851'
+      cos_prefix:
+        description: 'COS object prefix path'
+        required: true
+        default: 'eureka/2026-01-01/node2/images'
+      s3_bucket:
+        description: 'AWS S3 bucket name'
+        required: true
+      s3_prefix:
+        description: 'S3 object prefix path'
+        required: false
+        default: 'images/'
+      ecr_repository_prefix:
+        description: 'ECR repository prefix (e.g., inpart/)'
+        required: false
+        default: 'inpart/'
+
+env:
+  AWS_REGION: eu-west-1
+
+jobs:
+  sync-cos-to-s3:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install rclone
+        run: |
+          curl https://rclone.org/install.sh | sudo bash
+          rclone --version
+
+      - name: Sync from COS to S3
+        env:
+          TENCENT_COS_SECRET_ID: ${{ secrets.TENCENT_COS_SECRET_ID }}
+          TENCENT_COS_SECRET_KEY: ${{ secrets.TENCENT_COS_SECRET_KEY }}
+        run: |
+          chmod +x scripts/sync_cos_to_s3.sh
+          ./scripts/sync_cos_to_s3.sh \
+            "${{ inputs.cos_bucket }}" \
+            "${{ inputs.cos_prefix }}" \
+            "${{ inputs.s3_bucket }}" \
+            "${{ inputs.s3_prefix }}"
+
+      - name: Verify sync result
+        run: |
+          aws s3 ls s3://${{ inputs.s3_bucket }}/${{ inputs.s3_prefix }} --recursive | head -10
+
+  sync-s3-to-ecr:
+    needs: sync-cos-to-s3
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download and push images to ECR
+        run: |
+          chmod +x scripts/sync_s3_to_ecr.sh
+          ./scripts/sync_s3_to_ecr.sh \
+            "${{ inputs.s3_bucket }}" \
+            "${{ inputs.s3_prefix }}" \
+            "${{ inputs.ecr_repository_prefix }}" \
+            "${{ env.AWS_REGION }}"
+
+      - name: Pipeline Summary
+        run: |
+          echo "✅ Complete pipeline finished successfully!"
+          echo "COS: ${{ inputs.cos_bucket }}/${{ inputs.cos_prefix }}"
+          echo "S3: ${{ inputs.s3_bucket }}/${{ inputs.s3_prefix }}"
+          echo "ECR: ${{ inputs.ecr_repository_prefix }}"
